@@ -1,0 +1,55 @@
+library("sf")
+library("dplyr")
+library("xlsx")
+library("sqldf")
+
+ruta<-setwd("~/metadatos/")
+geojson_file<-list.files(ruta, pattern = "\\.json", full.names = TRUE)
+lista_archivos<-list()
+
+for (geojson_file in geojson_file) {
+    json_data<-st_read(geojson_file) 
+    df <- data.frame(
+      id = basename(geojson_file),  
+      acquired = json_data$acquired,
+      anomalous_pixels = json_data$anomalous_pixels,
+      clear_confidence_percent = json_data$clear_confidence_percent,
+      clear_percent = json_data$clear_percent,
+      cloud_cover = json_data$cloud_cover,
+      cloud_percent = json_data$cloud_percent,
+      ground_control = json_data$ground_control,
+      gsd = json_data$gsd,
+      instrument = json_data$instrument,
+      item_type = json_data$item_type,
+      pixel_resolution = json_data$pixel_resolution,
+      publishing_stage = json_data$publishing_stage,
+      quality_category = json_data$quality_category,
+      satellite_azimuth = json_data$satellite_azimuth,
+      satellite_id = json_data$satellite_id,
+      shadow_percent = json_data$shadow_percent,
+      snow_ice_percent = json_data$snow_ice_percent,
+      strip_id = json_data$strip_id,
+      sun_azimuth = json_data$sun_azimuth,
+      sun_elevation = json_data$sun_elevation,
+      updated = json_data$updated,
+      view_angle = json_data$view_angle,
+      visible_confidence_percent = json_data$visible_confidence_percent,
+      visible_percent = json_data$visible_percent
+  )
+  
+  lista_archivos[[length(lista_archivos) + 1]] <- df
+}
+
+final_datos <- bind_rows(lista_archivos)
+summary(final_datos)
+head(final_datos)
+
+verificacion<-sqldf("SELECT * FROM final_datos WHERE (anomalous_pixels > 0) 
+                    OR (clear_confidence_percent < 90)
+                    OR (quality_category = 'test')
+                    OR (shadow_percent > 0)
+                    OR (clear_percent < 90)
+                    OR (visible_confidence_percent < 90)")
+summary(verificacion)
+write.xlsx(final_datos, paste(ruta, "Metadatos.xlsx"))
+write.xlsx(verificacion, paste(ruta, "Archivos no aptos.xlsx"))
